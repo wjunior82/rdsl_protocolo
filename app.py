@@ -5,6 +5,7 @@ import logging
 import psycopg2
 import psycopg2.extras
 from typing import Dict, Any, List, Annotated, Optional
+import pyodbc
 
 # configure logging with timestamp including uvicorn access logger
 logging_config = {
@@ -65,6 +66,17 @@ DB_CONFIG = {
     "password": "uOSYfmgr4@j2onIp"
 }
 
+# configuração de conexão para banco SQL Server onde as colunas adicionais estão armazenadas
+SQLSERVER_CONFIG = {
+    # ajuste conforme o driver/host, nome do banco e credenciais
+    "driver": "{ODBC Driver 17 for SQL Server}",
+    "server": "your_sqlserver_host",
+    "database": "your_database",
+    "uid": "username",
+    "pwd": "password",
+    # opcional: port, etc
+}
+
 COLUNA_PROTOCOLO = "termo_protocolo"
 
 # =========================
@@ -122,10 +134,32 @@ def normalize_value(v):
     return v
 
 # =========================
-# CONEXÃO
+# CONEXÕES
 # =========================
+
 def get_connection():
+    """Retorna conexão com o PostgreSQL principal."""
     return psycopg2.connect(**DB_CONFIG)
+
+
+def get_sqlserver_connection():
+    """Cria conexão com o SQL Server usando pyodbc e as informações em SQLSERVER_CONFIG."""
+    conn_str = (
+        "DRIVER=SQL Server;SERVER=RDRJ2BIDB02;DATABASE=qualidade;UID=qualidadedados_aws;PWD=VitRf@20!1".format(**SQLSERVER_CONFIG)
+    )
+    # se precisar de porta, adicione ";PORT={port}" no conn_str
+    return pyodbc.connect(conn_str)
+
+
+def fetch_sqlserver_extra() -> Dict[str, Dict[str, Any]]:
+    conn = get_sqlserver_connection()
+    cursor = conn.cursor()
+    query = "SELECT NUM_PROTOCOLO, NME_USUARIO, DTA_CONTROLE FROM SSIS_DEV.ZG_CONTROLEPROTOCOLO"
+    cursor.execute(query)
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return {row[0]: {"NME_USUARIO": row[1], "DTA_CONTROLE": row[2]} for row in rows}
 
 # =========================
 # CARREGA UMA QUERY
@@ -288,6 +322,17 @@ def list_protocol(
 
     cursor.close()
     conn.close()
+
+    # se houver resultado, buscar colunas extras no SQL Server e mesclar
+    if rows:
+        # para evitar limites de parâmetros do ODBC, carregamos todos os extras
+        # e deixamos o Python fazer o 'join' por termo_protocolo.
+        extras = fetch_sqlserver_extra()
+        # otimização: usar compreensão de lista para mesclar em memória sem loop explícito
+        rows = [
+            {**r, "NME_USUARIO": extras.get(r.get("termo_protocolo"), {}).get("NME_USUARIO"), "DTA_CONTROLE": extras.get(r.get("termo_protocolo"), {}).get("DTA_CONTROLE")}
+            for r in rows
+        ]
 
     return rows
 
