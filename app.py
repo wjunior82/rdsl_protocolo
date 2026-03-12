@@ -6,6 +6,7 @@ import psycopg2
 import psycopg2.extras
 from typing import Dict, Any, List, Annotated, Optional
 import pyodbc
+from pydantic import BaseModel
 
 # configure logging with timestamp including uvicorn access logger
 logging_config = {
@@ -160,6 +161,51 @@ def fetch_sqlserver_extra() -> Dict[str, Dict[str, Any]]:
     cursor.close()
     conn.close()
     return {row[0]: {"NME_USUARIO": row[1], "DTA_CONTROLE": row[2]} for row in rows}
+
+# =========================
+# INSERE REGISTRO NO SQL SERVER
+# =========================
+def insert_controle_protocolo(data: dict) -> bool:
+    conn = None
+    cursor = None
+    try:
+        conn = get_sqlserver_connection()
+        cursor = conn.cursor()
+        query = "INSERT INTO SSIS_DEV.ZG_CONTROLEPROTOCOLO (NUM_PROTOCOLO, NME_USUARIO, DTA_CONTROLE) VALUES (?, ?, GETDATE())"
+        cursor.execute(query, (data["NUM_PROTOCOLO"], data["NME_USUARIO"]))
+        conn.commit()
+        return True
+    except Exception as e:
+        logging.error(f"Erro ao inserir registro: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+def delete_controle_protocolo(data: dict) -> bool:
+    conn = None
+    cursor = None
+    try:
+        conn = get_sqlserver_connection()
+        cursor = conn.cursor()
+        query = "DELETE FROM SSIS_DEV.ZG_CONTROLEPROTOCOLO WHERE NUM_PROTOCOLO = ?"
+        cursor.execute(query, (data["NUM_PROTOCOLO"],))
+        conn.commit()
+        return True
+    except Exception as e:
+        logging.error(f"Erro ao excluir registro: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 # =========================
 # CARREGA UMA QUERY
@@ -473,3 +519,14 @@ def get_list(
     contrato_nome_operadora: Annotated[Optional[List[str]], Query(..., alias="contrato_nome_operadora")] = None,
 ):
     return list_protocol(contrato_regional, contrato_nome_prestador, contrato_nome_operadora)        
+
+# =========================
+# ENDPOINT API insert controle protocolo
+# =========================
+@app.post("/insert-controle-protocolo")
+def pots_insert_controle_protocolo(data: dict):
+    return insert_controle_protocolo(data)
+
+@app.post("/delete-controle-protocolo")
+def pots_delete_controle_protocolo(data: dict):
+    return delete_controle_protocolo(data)
