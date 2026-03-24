@@ -23,6 +23,7 @@ class Settings:
     sqlserver_driver: str = os.getenv("SQLSERVER_DRIVER", "{ODBC Driver 17 for SQL Server}")
     sqlserver_server: str = os.getenv("SQLSERVER_SERVER", "")
     sqlserver_database: str = os.getenv("SQLSERVER_DATABASE", "qualidade")
+    sqlserver_scheme: str = os.getenv("SQLSERVER_SCHEME", "SSIS_DEV")
     sqlserver_uid: str = os.getenv("SQLSERVER_UID", "")
     sqlserver_password: str = os.getenv("SQLSERVER_PASSWORD", "")
     

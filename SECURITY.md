@@ -25,6 +25,7 @@ Este documento descreve as medidas de segurança implementadas no API de Protoco
    # Credenciais SQL Server
    SQLSERVER_SERVER=seu-sqlserver
    SQLSERVER_DATABASE=seu-database
+   SQLSERVER_SCHEME=seu-scheme
    SQLSERVER_UID=seu-usuario
    SQLSERVER_PASSWORD=sua-senha-segura
 

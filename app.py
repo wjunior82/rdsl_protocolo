@@ -98,6 +98,7 @@ SQLSERVER_CONFIG = {
     "driver": settings.sqlserver_driver,
     "server": settings.sqlserver_server,
     "database": settings.sqlserver_database,
+    "SCHEME": settings.sqlserver_scheme,
     "uid": settings.sqlserver_uid,
     "pwd": settings.sqlserver_password,
 }
@@ -194,12 +195,27 @@ def get_sqlserver_connection():
 def fetch_sqlserver_extra() -> Dict[str, Dict[str, Any]]:
     conn = get_sqlserver_connection()
     cursor = conn.cursor()
-    query = "SELECT NUM_PROTOCOLO, NME_USUARIO, DTA_CONTROLE FROM SSIS_DEV.ZG_CONTROLEPROTOCOLO"
+    query = f"SELECT NUM_PROTOCOLO, NME_USUARIO, DTA_CONTROLE FROM {settings.sqlserver_scheme}.ZG_CONTROLEPROTOCOLO"
     cursor.execute(query)
     rows = cursor.fetchall()
     cursor.close()
     conn.close()
     return {row[0]: {"NME_USUARIO": row[1], "DTA_CONTROLE": row[2]} for row in rows}
+
+# =========================
+# BUSCA CONTROLE PROTOCOLO ESPECÍFICO
+# =========================
+def fetch_controle_protocolo(protocolo: str) -> Optional[Dict[str, Any]]:
+    conn = get_sqlserver_connection()
+    cursor = conn.cursor()
+    query = f"SELECT NME_USUARIO, DTA_CONTROLE FROM {settings.sqlserver_scheme}.ZG_CONTROLEPROTOCOLO WHERE NUM_PROTOCOLO = ?"
+    cursor.execute(query, (protocolo,))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if row:
+        return {"NME_USUARIO": row[0], "DTA_CONTROLE": row[1]}
+    return None
 
 # =========================
 # INSERE REGISTRO NO SQL SERVER
@@ -210,7 +226,7 @@ def insert_controle_protocolo(data: dict) -> bool:
     try:
         conn = get_sqlserver_connection()
         cursor = conn.cursor()
-        query = "INSERT INTO SSIS_DEV.ZG_CONTROLEPROTOCOLO (NUM_PROTOCOLO, NME_USUARIO, DTA_CONTROLE) VALUES (?, ?, GETDATE())"
+        query = f"INSERT INTO {settings.sqlserver_scheme}.ZG_CONTROLEPROTOCOLO (NUM_PROTOCOLO, NME_USUARIO, DTA_CONTROLE) VALUES (?, ?, GETDATE())"
         cursor.execute(query, (data["NUM_PROTOCOLO"], data["NME_USUARIO"]))
         conn.commit()
         return True
@@ -231,7 +247,7 @@ def delete_controle_protocolo(data: dict) -> bool:
     try:
         conn = get_sqlserver_connection()
         cursor = conn.cursor()
-        query = "DELETE FROM SSIS_DEV.ZG_CONTROLEPROTOCOLO WHERE NUM_PROTOCOLO = ?"
+        query = f"DELETE FROM {settings.sqlserver_scheme}.ZG_CONTROLEPROTOCOLO WHERE NUM_PROTOCOLO = ?"
         cursor.execute(query, (data["NUM_PROTOCOLO"],))
         conn.commit()
         return True
@@ -627,10 +643,21 @@ def post_insert_controle_protocolo(
             "NUM_PROTOCOLO": protocolo,
             "NME_USUARIO": usuario
         })
-        return {
-            "success": result,
-            "message": "Protocolo inserted successfully" if result else "Failed to insert protocolo"
-        }
+        if result:
+            return {
+                "success": result,
+                "message": "Protocolo inserted successfully"
+            }
+        else:
+            # Fetch existing data
+            existing = fetch_controle_protocolo(protocolo)
+            response = {
+                "success": result,
+                "message": "Failed to insert protocolo"
+            }
+            if existing:
+                response.update(existing)
+            return response
     except ValueError as e:
         RequestLogger.log_error("/insert-controle-protocolo", str(e), "WARNING")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
