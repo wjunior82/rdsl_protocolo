@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from dataclasses import dataclass
 import logging
 import psycopg2
@@ -7,6 +8,26 @@ import psycopg2.extras
 from typing import Dict, Any, List, Annotated, Optional
 import pyodbc
 from pydantic import BaseModel
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+
+from config import settings
+from security import verify_api_key, validate_protocolo, validate_scope, validate_filter_list, RequestLogger, sanitize_string
+
+# =========================
+# PYDANTIC MODELS
+# =========================
+class ControleProtocoloInsert(BaseModel):
+    """Model for inserting controle protocolo."""
+    NUM_PROTOCOLO: str
+    NME_USUARIO: str
+
+class ControleProtocoloDelete(BaseModel):
+    """Model for deleting controle protocolo."""
+    NUM_PROTOCOLO: str
 
 # configure logging with timestamp including uvicorn access logger
 logging_config = {
@@ -49,33 +70,36 @@ app = FastAPI(title="Snapshot Diff API")
 # CONFIGURAÇÃO CORS
 # =========================
 app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=settings.allowed_origins,
+)
+
+app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "X-API-Key"],
 )
 
 # =========================
 # CONFIGURAÇÃO DO BANCO
 # =========================
 DB_CONFIG = {
-    "host": "10.150.59.246",
-    "port": 5432,
-    "database": "contractual-rules",
-    "user": "dados_rdsl",
-    "password": "uOSYfmgr4@j2onIp"
+    "host": settings.postgres_host,
+    "port": settings.postgres_port,
+    "database": settings.postgres_database,
+    "user": settings.postgres_user,
+    "password": settings.postgres_password
 }
 
 # configuração de conexão para banco SQL Server onde as colunas adicionais estão armazenadas
 SQLSERVER_CONFIG = {
-    # ajuste conforme o driver/host, nome do banco e credenciais
-    "driver": "{ODBC Driver 17 for SQL Server}",
-    "server": "your_sqlserver_host",
-    "database": "your_database",
-    "uid": "username",
-    "pwd": "password",
-    # opcional: port, etc
+    "driver": settings.sqlserver_driver,
+    "server": settings.sqlserver_server,
+    "database": settings.sqlserver_database,
+    "uid": settings.sqlserver_uid,
+    "pwd": settings.sqlserver_password,
 }
 
 COLUNA_PROTOCOLO = "termo_protocolo"
@@ -87,37 +111,47 @@ COLUNA_PROTOCOLO = "termo_protocolo"
 class TableConfig:
     name: str
     business_key: List[str]
+    columns: str
     ignore_columns: List[str]
     order_by: str
 
 TABLE_CONFIGS: Dict[str, TableConfig] = {
+    
+    
+    "report.vw_regras_diarias_taxas_historico": TableConfig(
+        name="report.vw_regras_diarias_taxas_historico",
+        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "Hierarquia", "Subclassificação Diárias / Taxas"],
+        columns="contrato_id, contrato_regional, contrato_nome_prestador, contrato_nome_operadora, TO_CHAR(termo_data_inicio_vigencia, 'DD/MM/YYYY') AS \"Detalhes da Vigência\", regra_tipo, regra_hierarquia AS \"Hierarquia\", regra_escopo_regra_de_transposicao AS \"Regra de Transposição\", regra_escopo_subclassificacao_diarias_taxas AS \"Subclassificação Diárias / Taxas\", regra_escopo_tipo_plano AS \"Tipo de plano\", regra_escopo_categoria_de_plano AS \"Categoria de plano\", regra_escopo_tipo_de_acomodacao AS \"Tipo de acomodação\", regra_escopo_tipo_atendimento AS \"Tipo de atendimento\", regra_escopo_principais_itens_de_transposicao AS \"Principais itens de transposição\", regra_escopo_outros_itens_de_transposicao AS \"Outros itens de transposição\", concat(regra_tabela_tabela, ' - ', regra_tabela_versao) AS \"Tabela\", regra_reajuste_tipo, regra_reajuste_ajuste, regra_reajuste_margem, regra_rsfd_taxa_comercializacao_tipo, regra_rsfd_taxa_comercializacao_ajuste, regra_rsfd_taxa_comercializacao_margem, regra_entrantes AS \"Entrantes\", regra_descontinuados AS \"Descontinuados\", regra_observacoes_descontinuados, regra_observacoes_entrantes, regra_observacoes AS \"Observações\", regra_periodicidade_descontinuados, regra_periodicidade_entrantes, regra_regra_de_descontinuados, regra_regra_de_entrantes, regra_tipo_de_alteracao AS \"Tipo de Alteração\"",
+        ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
+        order_by="regra_hierarquia, regra_escopo_subclassificacao_diarias_taxas, regra_escopo_tipo_plano, regra_escopo_categoria_de_plano, regra_escopo_tipo_de_acomodacao, regra_escopo_tipo_atendimento, regra_escopo_principais_itens_de_transposicao, regra_escopo_outros_itens_de_transposicao"
+    ),
+    
+    
     "report.vw_regras_medicamentos_historico": TableConfig(
         name="report.vw_regras_medicamentos_historico",
         business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "regra_hierarquia", "regra_escopo_subclassificacao_medicamentos"],
+        columns="*",
         ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
         order_by="regra_hierarquia, regra_escopo_subclassificacao_medicamentos, regra_escopo_generico, regra_escopo_tipo_plano, regra_escopo_tipo_atendimento, regra_escopo_especialidade"
-    ),
-    "report.vw_regras_diarias_taxas_historico": TableConfig(
-        name="report.vw_regras_diarias_taxas_historico",
-        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "regra_hierarquia", "regra_escopo_subclassificacao_diarias_taxas"],
-        ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
-        order_by="regra_hierarquia, regra_escopo_subclassificacao_diarias_taxas, regra_escopo_tipo_plano, regra_escopo_categoria_de_plano, regra_escopo_tipo_de_acomodacao, regra_escopo_tipo_atendimento, regra_escopo_principais_itens_de_transposicao, regra_escopo_outros_itens_de_transposicao"
     ),
     "report.vw_regras_pacotes_historico": TableConfig(
         name="report.vw_regras_pacotes_historico",
         business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "regra_hierarquia", "regra_escopo_subclassificacao_pacotes"],
+        columns="*",
         ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
         order_by="regra_hierarquia, regra_escopo_subclassificacao_pacotes, regra_escopo_tipo_plano, regra_escopo_categoria_de_plano, regra_escopo_tipo_de_acomodacao, regra_escopo_tipo_atendimento"
     ),
     "report.vw_regras_materiais_historico": TableConfig(
         name="report.vw_regras_materiais_historico",
         business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "regra_hierarquia", "regra_escopo_subclassificacao_materiais"],
+        columns="*",
         ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
         order_by="regra_hierarquia, regra_escopo_subclassificacao_materiais, regra_escopo_tipo_plano, regra_escopo_tipo_atendimento, regra_escopo_especialidade"
     ),
     "report.vw_regras_hm_sadt_historico": TableConfig(
         name="report.vw_regras_hm_sadt_historico",
         business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "regra_hierarquia", "regra_escopo_subclassificacao_hm_sadt"],
+        columns="*",
         ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
         order_by="regra_hierarquia, regra_escopo_subclassificacao_hm_sadt, regra_escopo_tipo_de_plano, regra_escopo_categoria_de_plano, regra_escopo_tipo_de_acomodacao, regra_escopo_especialidades_hm_sadt, regra_escopo_tipo_de_atendimento"
     ),
@@ -145,11 +179,16 @@ def get_connection():
 
 def get_sqlserver_connection():
     """Cria conexão com o SQL Server usando pyodbc e as informações em SQLSERVER_CONFIG."""
-    conn_str = (
-        "DRIVER=SQL Server;SERVER=RDRJ2BIDB02;DATABASE=qualidade;UID=qualidadedados_aws;PWD=VitRf@20!1".format(**SQLSERVER_CONFIG)
-    )
-    # se precisar de porta, adicione ";PORT={port}" no conn_str
-    return pyodbc.connect(conn_str)
+    try:
+        conn_str = (
+            f"DRIVER={SQLSERVER_CONFIG['driver']};SERVER={SQLSERVER_CONFIG['server']};"
+            f"DATABASE={SQLSERVER_CONFIG['database']};UID={SQLSERVER_CONFIG['uid']};"
+            f"PWD={SQLSERVER_CONFIG['pwd']}"
+        )
+        return pyodbc.connect(conn_str)
+    except Exception as e:
+        logging.error(f"Erro ao conectar ao SQL Server: {str(e)}")
+        raise
 
 
 def fetch_sqlserver_extra() -> Dict[str, Dict[str, Any]]:
@@ -233,7 +272,7 @@ def load_snapshot(protocolo: str, config: TableConfig) -> Dict[str, Dict[str, An
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     query = f"""
-        SELECT *
+        SELECT {config.columns}
         FROM {config.name}
         WHERE {COLUNA_PROTOCOLO} = %s
         ORDER BY {config.order_by}
@@ -288,15 +327,15 @@ def list_filters():
                                            select distinct contrato_nome_prestador from report.vw_regras_hm_sadt_historico
                                            ) x order by contrato_nome_prestador"""),
         "contrato_nome_operadora": load_query("""select UPPER(contrato_nome_operadora) AS contrato_nome_operadora from (
-                                           select distinct contrato_nome_operadora from report.vw_regras_medicamentos_historico
+                                           select distinct UPPER(TRIM(REPLACE(contrato_nome_operadora, CHR(160), ''))) as contrato_nome_operadora from report.vw_regras_medicamentos_historico
                                            union 
-                                           select distinct contrato_nome_operadora from report.vw_regras_diarias_taxas_historico
+                                           select distinct UPPER(TRIM(REPLACE(contrato_nome_operadora, CHR(160), ''))) as contrato_nome_operadora from report.vw_regras_diarias_taxas_historico
                                            union 
-                                           select distinct contrato_nome_operadora from report.vw_regras_pacotes_historico
+                                           select distinct UPPER(TRIM(REPLACE(contrato_nome_operadora, CHR(160), ''))) as contrato_nome_operadora from report.vw_regras_pacotes_historico
                                            union 
-                                           select distinct contrato_nome_operadora from report.vw_regras_materiais_historico
+                                           select distinct UPPER(TRIM(REPLACE(contrato_nome_operadora, CHR(160), ''))) as contrato_nome_operadora from report.vw_regras_materiais_historico
                                            union 
-                                           select distinct contrato_nome_operadora from report.vw_regras_hm_sadt_historico
+                                           select distinct UPPER(TRIM(REPLACE(contrato_nome_operadora, CHR(160), ''))) as contrato_nome_operadora from report.vw_regras_hm_sadt_historico
                                            ) x order by contrato_nome_operadora"""),
          "conjunto_regra_criado_por": load_query("""select LOWER(conjunto_regra_criado_por) AS conjunto_regra_criado_por from (
                                            select distinct conjunto_regra_criado_por from report.vw_regras_medicamentos_historico
@@ -324,15 +363,15 @@ def list_protocol(
 
     base_query = """
         select * from (
-        select distinct contrato_id, contrato_regional, contrato_nome_prestador, contrato_nome_operadora, termo_protocolo, termo_protocolo_data_publicacao, conjunto_regra_criado_por from report.vw_regras_medicamentos_historico
+        select distinct contrato_id, contrato_regional, contrato_nome_prestador, UPPER(TRIM(REPLACE(contrato_nome_operadora, CHR(160), ''))) as contrato_nome_operadora, termo_protocolo, termo_protocolo_data_publicacao, conjunto_regra_criado_por from report.vw_regras_medicamentos_historico
         union 
-        select distinct contrato_id, contrato_regional, contrato_nome_prestador, contrato_nome_operadora, termo_protocolo, termo_protocolo_data_publicacao, conjunto_regra_criado_por from report.vw_regras_diarias_taxas_historico
+        select distinct contrato_id, contrato_regional, contrato_nome_prestador, UPPER(TRIM(REPLACE(contrato_nome_operadora, CHR(160), ''))) as contrato_nome_operadora, termo_protocolo, termo_protocolo_data_publicacao, conjunto_regra_criado_por from report.vw_regras_diarias_taxas_historico
         union 
-        select distinct contrato_id, contrato_regional, contrato_nome_prestador, contrato_nome_operadora, termo_protocolo, termo_protocolo_data_publicacao, conjunto_regra_criado_por from report.vw_regras_pacotes_historico
+        select distinct contrato_id, contrato_regional, contrato_nome_prestador, UPPER(TRIM(REPLACE(contrato_nome_operadora, CHR(160), ''))) as contrato_nome_operadora, termo_protocolo, termo_protocolo_data_publicacao, conjunto_regra_criado_por from report.vw_regras_pacotes_historico
         union 
-        select distinct contrato_id, contrato_regional, contrato_nome_prestador, contrato_nome_operadora, termo_protocolo, termo_protocolo_data_publicacao, conjunto_regra_criado_por from report.vw_regras_materiais_historico
+        select distinct contrato_id, contrato_regional, contrato_nome_prestador, UPPER(TRIM(REPLACE(contrato_nome_operadora, CHR(160), ''))) as contrato_nome_operadora, termo_protocolo, termo_protocolo_data_publicacao, conjunto_regra_criado_por from report.vw_regras_materiais_historico
         union 
-        select distinct contrato_id, contrato_regional, contrato_nome_prestador, contrato_nome_operadora, termo_protocolo, termo_protocolo_data_publicacao, conjunto_regra_criado_por from report.vw_regras_hm_sadt_historico
+        select distinct contrato_id, contrato_regional, contrato_nome_prestador, UPPER(TRIM(REPLACE(contrato_nome_operadora, CHR(160), ''))) as contrato_nome_operadora, termo_protocolo, termo_protocolo_data_publicacao, conjunto_regra_criado_por from report.vw_regras_hm_sadt_historico
         ) x
     """
 
@@ -479,35 +518,62 @@ def diff_snapshots(old: Dict, new: Dict, config: TableConfig) -> Dict:
 def get_diff(
     scope_snapshot: Annotated[str, Query(..., alias="scope")],
     from_snapshot: Annotated[str, Query(..., alias="from")],
-    to_snapshot: Annotated[str, Query(..., alias="to")]
+    to_snapshot: Annotated[str, Query(..., alias="to")],
+    api_key: str = Depends(verify_api_key)
 ):
-    if scope_snapshot not in TABLE_CONFIGS:
-        return {"error": f"Scope '{scope_snapshot}' não encontrado. Valores válidos: {list(TABLE_CONFIGS.keys())}"}
-    
-    config = TABLE_CONFIGS[scope_snapshot]
-    old_snapshot = load_snapshot(from_snapshot, config)
-    new_snapshot = load_snapshot(to_snapshot, config)
+    try:
+        # Validate inputs
+        scope_snapshot = validate_scope(scope_snapshot)
+        from_snapshot = validate_protocolo(from_snapshot)
+        to_snapshot = validate_protocolo(to_snapshot)
+        
+        # Log request
+        RequestLogger.log_request("/diff", api_key, {
+            "scope": scope_snapshot,
+            "from": from_snapshot,
+            "to": to_snapshot
+        })
+        
+        if scope_snapshot not in TABLE_CONFIGS:
+            return {"error": f"Scope '{scope_snapshot}' não encontrado. Valores válidos: {list(TABLE_CONFIGS.keys())}"}
+        
+        config = TABLE_CONFIGS[scope_snapshot]
+        old_snapshot = load_snapshot(from_snapshot, config)
+        new_snapshot = load_snapshot(to_snapshot, config)
 
-    diff_result = diff_snapshots(old_snapshot, new_snapshot, config)
+        diff_result = diff_snapshots(old_snapshot, new_snapshot, config)
 
-    return {
-        "scope": scope_snapshot,
-        "from": from_snapshot,
-        "to": to_snapshot,
-        "summary": {
-            "inserted": len(diff_result["inserted"]),
-            "deleted": len(diff_result["deleted"]),
-            "updated": len(diff_result["updated"])
-        },
-        "diff": diff_result
-    }
+        return {
+            "scope": scope_snapshot,
+            "from": from_snapshot,
+            "to": to_snapshot,
+            "summary": {
+                "inserted": len(diff_result["inserted"]),
+                "deleted": len(diff_result["deleted"]),
+                "updated": len(diff_result["updated"])
+            },
+            "diff": diff_result
+        }
+    except ValueError as e:
+        RequestLogger.log_error("/diff", str(e), "WARNING")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        RequestLogger.log_error("/diff", str(e), "ERROR")
+        logging.error(f"Error in /diff endpoint: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 # =========================
 # ENDPOINT API FILTERS
 # =========================
 @app.get("/filters")
-def get_filters():
-    return list_filters()        
+def get_filters(api_key: str = Depends(verify_api_key)):
+    try:
+        RequestLogger.log_request("/filters", api_key)
+        return list_filters()
+    except Exception as e:
+        RequestLogger.log_error("/filters", str(e), "ERROR")
+        logging.error(f"Error in /filters endpoint: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")        
 
 # =========================
 # ENDPOINT API LIST
@@ -517,16 +583,86 @@ def get_list(
     contrato_regional: Annotated[Optional[List[str]], Query(..., alias="contrato_regional")] = None,
     contrato_nome_prestador: Annotated[Optional[List[str]], Query(..., alias="contrato_nome_prestador")] = None,
     contrato_nome_operadora: Annotated[Optional[List[str]], Query(..., alias="contrato_nome_operadora")] = None,
+    api_key: str = Depends(verify_api_key)
 ):
-    return list_protocol(contrato_regional, contrato_nome_prestador, contrato_nome_operadora)        
+    try:
+        # Validate and sanitize filter inputs
+        contrato_regional = validate_filter_list(contrato_regional)
+        contrato_nome_prestador = validate_filter_list(contrato_nome_prestador)
+        contrato_nome_operadora = validate_filter_list(contrato_nome_operadora)
+        
+        RequestLogger.log_request("/list", api_key, {
+            "contrato_regional": len(contrato_regional) if contrato_regional else 0,
+            "contrato_nome_prestador": len(contrato_nome_prestador) if contrato_nome_prestador else 0,
+            "contrato_nome_operadora": len(contrato_nome_operadora) if contrato_nome_operadora else 0,
+        })
+        
+        return list_protocol(contrato_regional, contrato_nome_prestador, contrato_nome_operadora)
+    except ValueError as e:
+        RequestLogger.log_error("/list", str(e), "WARNING")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        RequestLogger.log_error("/list", str(e), "ERROR")
+        logging.error(f"Error in /list endpoint: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")        
 
 # =========================
 # ENDPOINT API insert controle protocolo
 # =========================
 @app.post("/insert-controle-protocolo")
-def pots_insert_controle_protocolo(data: dict):
-    return insert_controle_protocolo(data)
+def post_insert_controle_protocolo(
+    data: ControleProtocoloInsert, 
+    api_key: str = Depends(verify_api_key)
+):
+    try:
+        # Validate protocolo field
+        protocolo = validate_protocolo(data.NUM_PROTOCOLO)
+        usuario = sanitize_string(data.NME_USUARIO, max_length=100)
+        
+        RequestLogger.log_request("/insert-controle-protocolo", api_key, {
+            "protocolo": protocolo
+        })
+        
+        result = insert_controle_protocolo({
+            "NUM_PROTOCOLO": protocolo,
+            "NME_USUARIO": usuario
+        })
+        return {
+            "success": result,
+            "message": "Protocolo inserted successfully" if result else "Failed to insert protocolo"
+        }
+    except ValueError as e:
+        RequestLogger.log_error("/insert-controle-protocolo", str(e), "WARNING")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        RequestLogger.log_error("/insert-controle-protocolo", str(e), "ERROR")
+        logging.error(f"Error in /insert-controle-protocolo endpoint: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 @app.post("/delete-controle-protocolo")
-def pots_delete_controle_protocolo(data: dict):
-    return delete_controle_protocolo(data)
+def post_delete_controle_protocolo(
+    data: ControleProtocoloDelete, 
+    api_key: str = Depends(verify_api_key)
+):
+    try:
+        # Validate protocolo field
+        protocolo = validate_protocolo(data.NUM_PROTOCOLO)
+        
+        RequestLogger.log_request("/delete-controle-protocolo", api_key, {
+            "protocolo": protocolo
+        })
+        
+        result = delete_controle_protocolo({
+            "NUM_PROTOCOLO": protocolo
+        })
+        return {
+            "success": result,
+            "message": "Protocolo deleted successfully" if result else "Failed to delete protocolo"
+        }
+    except ValueError as e:
+        RequestLogger.log_error("/delete-controle-protocolo", str(e), "WARNING")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        RequestLogger.log_error("/delete-controle-protocolo", str(e), "ERROR")
+        logging.error(f"Error in /delete-controle-protocolo endpoint: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
