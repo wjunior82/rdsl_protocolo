@@ -117,45 +117,43 @@ class TableConfig:
     order_by: str
 
 TABLE_CONFIGS: Dict[str, TableConfig] = {
-    
-    
     "report.vw_regras_diarias_taxas_historico": TableConfig(
         name="report.vw_regras_diarias_taxas_historico",
-        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "Hierarquia", "Subclassificação Diárias / Taxas"],
-        columns="contrato_id, contrato_regional, contrato_nome_prestador, contrato_nome_operadora, TO_CHAR(termo_data_inicio_vigencia, 'DD/MM/YYYY') AS \"Detalhes da Vigência\", regra_tipo, regra_hierarquia AS \"Hierarquia\", regra_escopo_regra_de_transposicao AS \"Regra de Transposição\", regra_escopo_subclassificacao_diarias_taxas AS \"Subclassificação Diárias / Taxas\", regra_escopo_tipo_plano AS \"Tipo de plano\", regra_escopo_categoria_de_plano AS \"Categoria de plano\", regra_escopo_tipo_de_acomodacao AS \"Tipo de acomodação\", regra_escopo_tipo_atendimento AS \"Tipo de atendimento\", regra_escopo_principais_itens_de_transposicao AS \"Principais itens de transposição\", regra_escopo_outros_itens_de_transposicao AS \"Outros itens de transposição\", concat(regra_tabela_tabela, ' - ', regra_tabela_versao) AS \"Tabela\", regra_reajuste_tipo, regra_reajuste_ajuste, regra_reajuste_margem, regra_rsfd_taxa_comercializacao_tipo, regra_rsfd_taxa_comercializacao_ajuste, regra_rsfd_taxa_comercializacao_margem, regra_entrantes AS \"Entrantes\", regra_descontinuados AS \"Descontinuados\", regra_observacoes_descontinuados, regra_observacoes_entrantes, regra_observacoes AS \"Observações\", regra_periodicidade_descontinuados, regra_periodicidade_entrantes, regra_regra_de_descontinuados, regra_regra_de_entrantes, regra_tipo_de_alteracao AS \"Tipo de Alteração\"",
+        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "conjunto_regra_indice", "Hierarquia", "Subclassificação Diárias / Taxas"],
+        columns="conjunto_regra_indice, contrato_id, contrato_regional, contrato_nome_prestador, contrato_nome_operadora, TO_CHAR(termo_data_inicio_vigencia, 'DD/MM/YYYY') AS \"Detalhes da Vigência\", regra_hierarquia AS \"Hierarquia\", regra_escopo_regra_de_transposicao AS \"Regra de Transposição\", regra_escopo_subclassificacao_diarias_taxas AS \"Subclassificação Diárias / Taxas\", regra_escopo_tipo_plano AS \"Tipo de plano\", regra_escopo_categoria_de_plano AS \"Categoria de plano\", regra_escopo_tipo_de_acomodacao AS \"Tipo de acomodação\", regra_escopo_tipo_atendimento AS \"Tipo de atendimento\", regra_escopo_principais_itens_de_transposicao AS \"Principais itens de transposição\", regra_escopo_outros_itens_de_transposicao AS \"Outros itens de transposição\", regra_tipo, concat(regra_tabela_tabela, ' - ', regra_tabela_versao) AS \"Tabela\", regra_reajuste_tipo, regra_reajuste_ajuste, regra_reajuste_margem, regra_rsfd_taxa_comercializacao_tipo, regra_rsfd_taxa_comercializacao_ajuste, regra_rsfd_taxa_comercializacao_margem, regra_entrantes AS \"Entrantes\", regra_descontinuados AS \"Descontinuados\", regra_observacoes_descontinuados, regra_observacoes_entrantes, regra_observacoes AS \"Observações\", regra_periodicidade_descontinuados, regra_periodicidade_entrantes, regra_regra_de_descontinuados, regra_regra_de_entrantes, regra_tipo_de_alteracao AS \"Tipo de Alteração\"",
         ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
-        order_by="regra_hierarquia, regra_escopo_subclassificacao_diarias_taxas, regra_escopo_tipo_plano, regra_escopo_categoria_de_plano, regra_escopo_tipo_de_acomodacao, regra_escopo_tipo_atendimento, regra_escopo_principais_itens_de_transposicao, regra_escopo_outros_itens_de_transposicao"
-    ),
-    
-    
-    "report.vw_regras_medicamentos_historico": TableConfig(
-        name="report.vw_regras_medicamentos_historico",
-        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "regra_hierarquia", "regra_escopo_subclassificacao_medicamentos"],
-        columns="*",
-        ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
-        order_by="regra_hierarquia, regra_escopo_subclassificacao_medicamentos, regra_escopo_generico, regra_escopo_tipo_plano, regra_escopo_tipo_atendimento, regra_escopo_especialidade"
-    ),
-    "report.vw_regras_pacotes_historico": TableConfig(
-        name="report.vw_regras_pacotes_historico",
-        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "regra_hierarquia", "regra_escopo_subclassificacao_pacotes"],
-        columns="*",
-        ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
-        order_by="regra_hierarquia, regra_escopo_subclassificacao_pacotes, regra_escopo_tipo_plano, regra_escopo_categoria_de_plano, regra_escopo_tipo_de_acomodacao, regra_escopo_tipo_atendimento"
-    ),
-    "report.vw_regras_materiais_historico": TableConfig(
-        name="report.vw_regras_materiais_historico",
-        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "regra_hierarquia", "regra_escopo_subclassificacao_materiais"],
-        columns="*",
-        ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
-        order_by="regra_hierarquia, regra_escopo_subclassificacao_materiais, regra_escopo_tipo_plano, regra_escopo_tipo_atendimento, regra_escopo_especialidade"
+        order_by="conjunto_regra_indice, regra_hierarquia, regra_escopo_subclassificacao_diarias_taxas, regra_escopo_tipo_plano, regra_escopo_categoria_de_plano, regra_escopo_tipo_de_acomodacao, regra_escopo_tipo_atendimento, regra_escopo_principais_itens_de_transposicao, regra_escopo_outros_itens_de_transposicao"
     ),
     "report.vw_regras_hm_sadt_historico": TableConfig(
         name="report.vw_regras_hm_sadt_historico",
-        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "regra_hierarquia", "regra_escopo_subclassificacao_hm_sadt"],
+        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "conjunto_regra_indice", "regra_hierarquia", "regra_escopo_subclassificacao_hm_sadt"],
         columns="*",
         ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
-        order_by="regra_hierarquia, regra_escopo_subclassificacao_hm_sadt, regra_escopo_tipo_de_plano, regra_escopo_categoria_de_plano, regra_escopo_tipo_de_acomodacao, regra_escopo_especialidades_hm_sadt, regra_escopo_tipo_de_atendimento"
+        order_by="conjunto_regra_indice, regra_hierarquia, regra_escopo_subclassificacao_hm_sadt, regra_escopo_tipo_de_plano, regra_escopo_categoria_de_plano, regra_escopo_tipo_de_acomodacao, regra_escopo_especialidades_hm_sadt, regra_escopo_tipo_de_atendimento"
     ),
+    "report.vw_regras_materiais_historico": TableConfig(
+        name="report.vw_regras_materiais_historico",
+        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "conjunto_regra_indice", "regra_hierarquia", "regra_escopo_subclassificacao_materiais"],
+        columns="*",
+        ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
+        order_by="conjunto_regra_indice, regra_hierarquia, regra_escopo_subclassificacao_materiais, regra_escopo_tipo_plano, regra_escopo_tipo_atendimento, regra_escopo_especialidade"
+    ),
+    "report.vw_regras_medicamentos_historico": TableConfig(
+        name="report.vw_regras_medicamentos_historico",
+        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "conjunto_regra_indice", "regra_hierarquia", "regra_escopo_subclassificacao_medicamentos"],
+        columns="*",
+        ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
+        order_by="conjunto_regra_indice, regra_hierarquia, regra_escopo_subclassificacao_medicamentos, regra_escopo_generico, regra_escopo_tipo_plano, regra_escopo_tipo_atendimento, regra_escopo_especialidade"
+    ),
+    "report.vw_regras_pacotes_historico": TableConfig(
+        name="report.vw_regras_pacotes_historico",
+        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "conjunto_regra_indice", "regra_hierarquia", "regra_escopo_subclassificacao_pacotes"],
+        columns="*",
+        ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
+        order_by="conjunto_regra_indice, regra_hierarquia, regra_escopo_subclassificacao_pacotes, regra_escopo_tipo_plano, regra_escopo_categoria_de_plano, regra_escopo_tipo_de_acomodacao, regra_escopo_tipo_atendimento"
+    ),
+    
+    
 }
 
 
@@ -449,13 +447,13 @@ def remove_empty_values(data: Dict) -> Dict:
 # =========================
 def _extract_sort_key(key: str) -> tuple:
     """
-    Extrai os 2 últimos tokens da key para ordenação.
+    Extrai os 3 últimos tokens da key para ordenação.
     Key format: token1|token2|token3|token4|token5
-    Ordena por: token5 (último), token4 (penúltimo) 
+    Ordena por: token3, token4, token5 
     """
     tokens = key.split("|")
-    if len(tokens) >= 2:
-        return (tokens[-1], tokens[-2])
+    if len(tokens) >= 3:
+        return (tokens[-3], tokens[-2], tokens[-1])
     return (key,)
 
 
@@ -518,7 +516,7 @@ def diff_snapshots(old: Dict, new: Dict, config: TableConfig) -> Dict:
             })
 
     # =========================
-    # ORDENAR RESULTADOS POR ÚLTIMOS 2 TOKENS DA KEY
+    # ORDENAR RESULTADOS POR ÚLTIMOS 3 TOKENS DA KEY
     # =========================
     result["inserted"].sort(key=lambda x: _extract_sort_key(x["key"]))
     result["deleted"].sort(key=lambda x: _extract_sort_key(x["key"]))
@@ -575,7 +573,7 @@ def get_diff(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         RequestLogger.log_error("/diff", str(e), "ERROR")
-        logging.error(f"Error in /diff endpoint: {str(e)}")
+        logging.error(f"Error in /diff scope: {scope_snapshot} endpoint: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 # =========================
