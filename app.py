@@ -7,7 +7,7 @@ import psycopg2
 import psycopg2.extras
 from typing import Dict, Any, List, Annotated, Optional
 import pyodbc
-from pydantic import BaseModel
+from pydantic import BaseModel, config
 from dotenv import load_dotenv
 import os
 
@@ -119,8 +119,8 @@ class TableConfig:
 TABLE_CONFIGS: Dict[str, TableConfig] = {
     "report.vw_regras_diarias_taxas_historico": TableConfig(
         name="report.vw_regras_diarias_taxas_historico",
-        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "conjunto_regra_indice", "Hierarquia", "Subclassificação Diárias / Taxas"],
-        columns="conjunto_regra_indice, contrato_id, contrato_regional, contrato_nome_prestador, contrato_nome_operadora, TO_CHAR(termo_data_inicio_vigencia, 'DD/MM/YYYY') AS \"Detalhes da Vigência\", regra_hierarquia AS \"Hierarquia\", regra_escopo_regra_de_transposicao AS \"Regra de Transposição\", regra_escopo_subclassificacao_diarias_taxas AS \"Subclassificação Diárias / Taxas\", regra_escopo_tipo_plano AS \"Tipo de plano\", regra_escopo_categoria_de_plano AS \"Categoria de plano\", regra_escopo_tipo_de_acomodacao AS \"Tipo de acomodação\", regra_escopo_tipo_atendimento AS \"Tipo de atendimento\", regra_escopo_principais_itens_de_transposicao AS \"Principais itens de transposição\", regra_escopo_outros_itens_de_transposicao AS \"Outros itens de transposição\", regra_tipo, concat(regra_tabela_tabela, ' - ', regra_tabela_versao) AS \"Tabela\", regra_reajuste_tipo, regra_reajuste_ajuste, regra_reajuste_margem, regra_rsfd_taxa_comercializacao_tipo, regra_rsfd_taxa_comercializacao_ajuste, regra_rsfd_taxa_comercializacao_margem, regra_entrantes AS \"Entrantes\", regra_descontinuados AS \"Descontinuados\", regra_observacoes_descontinuados, regra_observacoes_entrantes, regra_observacoes AS \"Observações\", regra_periodicidade_descontinuados, regra_periodicidade_entrantes, regra_regra_de_descontinuados, regra_regra_de_entrantes, regra_tipo_de_alteracao AS \"Tipo de Alteração\"",
+        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "Escopo", "Hierarquia", "Subclassificação Diárias / Taxas"],
+        columns="contrato_id, contrato_regional, contrato_nome_prestador, contrato_nome_operadora, TO_CHAR(termo_data_inicio_vigencia, 'DD/MM/YYYY') AS \"Detalhes da Vigência\", conjunto_regra_indice + 1 AS \"Escopo\", regra_hierarquia AS \"Hierarquia\", regra_escopo_regra_de_transposicao AS \"Regra de Transposição\", regra_escopo_subclassificacao_diarias_taxas AS \"Subclassificação Diárias / Taxas\", regra_escopo_tipo_plano AS \"Tipo de plano\", regra_escopo_categoria_de_plano AS \"Categoria de plano\", regra_escopo_tipo_de_acomodacao AS \"Tipo de acomodação\", regra_escopo_tipo_atendimento AS \"Tipo de atendimento\", regra_escopo_principais_itens_de_transposicao AS \"Principais itens de transposição\", regra_escopo_outros_itens_de_transposicao AS \"Outros itens de transposição\", regra_tipo AS \"Tipo de Regra\", concat(regra_tabela_tabela, ' - ', regra_tabela_versao) AS \"Tabela\", case when ((regra_reajuste_tipo is null) or (regra_reajuste_ajuste is null)) then '' else concat(regra_reajuste_tipo, ' de ', regra_reajuste_ajuste, '%') end AS \"Reajuste %\", case when ((regra_rsfd_taxa_comercializacao_tipo is null) or (regra_rsfd_taxa_comercializacao_ajuste is null)) then '' else concat(regra_rsfd_taxa_comercializacao_tipo, ' de ', regra_rsfd_taxa_comercializacao_ajuste, '%') end AS \"Taxa de Comercialização\", regra_entrantes AS \"Entrantes\", regra_regra_de_entrantes AS \"Regra de Entrantes\", regra_periodicidade_entrantes AS \"Periodicidade entrantes\", regra_observacoes_entrantes AS \"Observações Entrantes\", regra_descontinuados AS \"Descontinuados\", regra_regra_de_descontinuados AS \"Regra de Descontinuados\", regra_periodicidade_descontinuados AS \"Periodicidade descontinuados\", regra_observacoes_descontinuados AS \"Observações Descontinuados\", regra_observacoes AS \"Observações\", regra_tipo_de_alteracao AS \"Tipo de Alteração\"",
         ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
         order_by="conjunto_regra_indice, regra_hierarquia, regra_escopo_subclassificacao_diarias_taxas, regra_escopo_tipo_plano, regra_escopo_categoria_de_plano, regra_escopo_tipo_de_acomodacao, regra_escopo_tipo_atendimento, regra_escopo_principais_itens_de_transposicao, regra_escopo_outros_itens_de_transposicao"
     ),
@@ -284,14 +284,14 @@ def load_query(query: str) -> List[Any]:
 def load_snapshot(protocolo: str, config: TableConfig) -> Dict[str, Dict[str, Any]]:
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
+    colunas_escapadas = config.columns.replace('%', '%%')
     query = f"""
-        SELECT {config.columns}
+        SELECT {colunas_escapadas}
         FROM {config.name}
         WHERE {COLUNA_PROTOCOLO} = %s
         ORDER BY {config.order_by}
     """
-
+    
     cursor.execute(query, (protocolo,))
     rows = cursor.fetchall()
 
