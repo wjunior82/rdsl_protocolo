@@ -119,7 +119,7 @@ class TableConfig:
 TABLE_CONFIGS: Dict[str, TableConfig] = {
     "report.vw_regras_diarias_taxas_historico": TableConfig(
         name="report.vw_regras_diarias_taxas_historico",
-        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "Escopo", "Hierarquia", "Subclassificação Diárias / Taxas"],
+        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "Escopo", "Hierarquia", "Subclassificação Diárias / Taxas", "Tipo de plano", "Categoria de plano", "Tipo de acomodação", "Tipo de atendimento", "Principais itens de transposição", "Outros itens de transposição"],
         columns="contrato_id, contrato_regional, contrato_nome_prestador, contrato_nome_operadora, TO_CHAR(termo_data_inicio_vigencia, 'DD/MM/YYYY') AS \"Detalhes da Vigência\", conjunto_regra_indice + 1 AS \"Escopo\", regra_hierarquia AS \"Hierarquia\", regra_escopo_regra_de_transposicao AS \"Regra de Transposição\", regra_escopo_subclassificacao_diarias_taxas AS \"Subclassificação Diárias / Taxas\", regra_escopo_tipo_plano AS \"Tipo de plano\", regra_escopo_categoria_de_plano AS \"Categoria de plano\", regra_escopo_tipo_de_acomodacao AS \"Tipo de acomodação\", regra_escopo_tipo_atendimento AS \"Tipo de atendimento\", regra_escopo_principais_itens_de_transposicao AS \"Principais itens de transposição\", regra_escopo_outros_itens_de_transposicao AS \"Outros itens de transposição\", regra_tipo AS \"Tipo de Regra\", concat(regra_tabela_tabela, ' - ', regra_tabela_versao) AS \"Tabela\", case when ((regra_reajuste_tipo is null) or (regra_reajuste_ajuste is null)) then '' else concat(regra_reajuste_tipo, ' de ', regra_reajuste_ajuste, '%') end AS \"Reajuste %\", case when ((regra_rsfd_taxa_comercializacao_tipo is null) or (regra_rsfd_taxa_comercializacao_ajuste is null)) then '' else concat(regra_rsfd_taxa_comercializacao_tipo, ' de ', regra_rsfd_taxa_comercializacao_ajuste, '%') end AS \"Taxa de Comercialização\", regra_entrantes AS \"Entrantes\", regra_regra_de_entrantes AS \"Regra de Entrantes\", regra_periodicidade_entrantes AS \"Periodicidade entrantes\", regra_observacoes_entrantes AS \"Observações Entrantes\", regra_descontinuados AS \"Descontinuados\", regra_regra_de_descontinuados AS \"Regra de Descontinuados\", regra_periodicidade_descontinuados AS \"Periodicidade descontinuados\", regra_observacoes_descontinuados AS \"Observações Descontinuados\", regra_observacoes AS \"Observações\", regra_tipo_de_alteracao AS \"Tipo de Alteração\"",
         ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
         order_by="conjunto_regra_indice, regra_hierarquia, regra_escopo_subclassificacao_diarias_taxas, regra_escopo_tipo_plano, regra_escopo_categoria_de_plano, regra_escopo_tipo_de_acomodacao, regra_escopo_tipo_atendimento, regra_escopo_principais_itens_de_transposicao, regra_escopo_outros_itens_de_transposicao"
@@ -140,22 +140,24 @@ TABLE_CONFIGS: Dict[str, TableConfig] = {
     ),
     "report.vw_regras_medicamentos_historico": TableConfig(
         name="report.vw_regras_medicamentos_historico",
-        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "conjunto_regra_indice", "regra_hierarquia", "regra_escopo_subclassificacao_medicamentos"],
-        columns="*",
+        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "Escopo", "Hierarquia", "Subclassificação Medicamentos", "Tipo de plano", "Tipo de atendimento", "Especialidade"],
+        columns="contrato_id, contrato_regional, contrato_nome_prestador, contrato_nome_operadora, TO_CHAR(termo_data_inicio_vigencia, 'DD/MM/YYYY') AS \"Detalhes da Vigência\", conjunto_regra_indice + 1 AS \"Escopo\", regra_hierarquia AS \"Hierarquia\", regra_escopo_subclassificacao_medicamentos AS \"Subclassificação Medicamentos\", regra_escopo_generico AS \"Genérico\", regra_escopo_tipo_plano AS \"Tipo de plano\", regra_escopo_tipo_atendimento AS \"Tipo de atendimento\", regra_escopo_especialidade AS \"Especialidade\", regra_tipo AS \"Tipo de Regra\", concat(regra_tabela_tabela, ' - ', regra_tabela_versao) AS \"Tabela\", regra_brasindice_congelado AS \"Brasindice Congelado\", regra_fracionamento AS \"Fracionamento\", regra_tipo_preco AS \"Tipo preço\", \
+        case when regra_tipo IN ('Brasíndice') then case when ((regra_reajuste_tipo is null) or (regra_reajuste_ajuste is null)) then '' else concat(regra_reajuste_tipo, ' de ', regra_reajuste_ajuste, '%') end else '' end AS \"Reajuste %\", \
+        case when regra_tipo IN ('Brasíndice') then case when ((regra_margem_tipo is null) or (regra_margem_ajuste is null)) then '' else concat(regra_margem_tipo, ' de ', regra_margem_ajuste, '%') end else '' end AS \"Margem %\", \
+        regra_aliquota AS \"Aliquota\", regra_entrantes AS \"Entrantes\", regra_regra_de_entrantes AS \"Regra de Entrantes\", regra_inclusao_automatica_entrantes AS \"Inclusão automática entrantes\", regra_periodicidade_entrantes AS \"Periodicidade entrantes\", regra_observacoes_entrantes AS \"Observações Entrantes\", regra_descontinuados AS \"Descontinuados\", regra_regra_de_descontinuados AS \"Regra de Descontinuados\", regra_inclusao_automatica_descontinuados AS \"Inclusão automática descontinuados\", regra_periodicidade_descontinuados AS \"Periodicidade descontinuados\", regra_observacoes_descontinuados AS \"Observações Descontinuados\", regra_observacoes AS \"Observações\", regra_tipo_de_alteracao AS \"Tipo de Alteração\", \
+        case when regra_tipo IN ('Brasíndice') then case when ((regra_tabela_fracionamento_tabela is null) or (regra_tabela_fracionamento_versao is null)) then '' else concat(regra_tabela_fracionamento_tabela, ' - ', regra_tabela_fracionamento_versao) end else '' end AS \"Tabela Fracionamento\", \
+        case when regra_tipo IN ('Brasíndice') then case when ((regra_tabela_planos_tabela is null) or (regra_tabela_planos_versao is null)) then '' else concat(regra_tabela_planos_tabela, ' - ', regra_tabela_planos_versao) end else '' end AS \"Tabela de Planos\"",              
         ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
-        order_by="conjunto_regra_indice, regra_hierarquia, regra_escopo_subclassificacao_medicamentos, regra_escopo_generico, regra_escopo_tipo_plano, regra_escopo_tipo_atendimento, regra_escopo_especialidade"
+        order_by="conjunto_regra_indice, regra_hierarquia, regra_escopo_subclassificacao_medicamentos, regra_escopo_tipo_plano, regra_escopo_tipo_atendimento, regra_escopo_especialidade"
     ),
     "report.vw_regras_pacotes_historico": TableConfig(
         name="report.vw_regras_pacotes_historico",
-        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "Escopo", "Hierarquia", "Subclassificação Pacotes"],
+        business_key=["contrato_id", "contrato_nome_prestador", "contrato_nome_operadora", "Escopo", "Hierarquia", "Subclassificação Pacotes", "Tipo de plano", "Categoria de plano", "Tipo de acomodação", "Tipo de atendimento"],
         columns="contrato_id, contrato_regional, contrato_nome_prestador, contrato_nome_operadora, TO_CHAR(termo_data_inicio_vigencia, 'DD/MM/YYYY') AS \"Detalhes da Vigência\", conjunto_regra_indice + 1 AS \"Escopo\", regra_hierarquia AS \"Hierarquia\", regra_escopo_subclassificacao_pacotes AS \"Subclassificação Pacotes\", regra_escopo_tipo_plano AS \"Tipo de plano\", regra_escopo_categoria_de_plano AS \"Categoria de plano\", regra_escopo_tipo_de_acomodacao AS \"Tipo de acomodação\", regra_escopo_tipo_atendimento AS \"Tipo de atendimento\", regra_tipo AS \"Tipo de Regra\", concat(regra_tabela_tabela, ' - ', regra_tabela_versao) AS \"Tabela\", case when ((regra_reajuste_tipo is null) or (regra_reajuste_ajuste is null)) then '' else concat(regra_reajuste_tipo, ' de ', regra_reajuste_ajuste, '%') end AS \"Reajuste %\", case when ((regra_rsfd_taxa_comercializacao_tipo is null) or (regra_rsfd_taxa_comercializacao_ajuste is null)) then '' else concat(regra_rsfd_taxa_comercializacao_tipo, ' de ', regra_rsfd_taxa_comercializacao_ajuste, '%') end AS \"Taxa de Comercialização\", regra_entrantes AS \"Entrantes\", regra_regra_de_entrantes AS \"Regra de Entrantes\", regra_periodicidade_entrantes AS \"Periodicidade entrantes\", regra_observacoes_entrantes AS \"Observações Entrantes\", regra_descontinuados AS \"Descontinuados\", regra_regra_de_descontinuados AS \"Regra de Descontinuados\", regra_periodicidade_descontinuados AS \"Periodicidade descontinuados\", regra_observacoes_descontinuados AS \"Observações Descontinuados\", regra_observacoes AS \"Observações\", regra_tipo_de_alteracao AS \"Tipo de Alteração\"",
         ignore_columns=["termo_protocolo", "termo_data_criacao", "termo_protocolo_data_publicacao", "conjunto_regra_criado_por", "conjunto_regra_data_inclusao", "termo_ultima_versao"],
         order_by="conjunto_regra_indice, regra_hierarquia, regra_escopo_subclassificacao_pacotes, regra_escopo_tipo_plano, regra_escopo_categoria_de_plano, regra_escopo_tipo_de_acomodacao, regra_escopo_tipo_atendimento"
     ),
-    
-    
 }
-
 
 # =========================
 # NORMALIZA O RETORNO
@@ -447,14 +449,12 @@ def remove_empty_values(data: Dict) -> Dict:
 # =========================
 def _extract_sort_key(key: str) -> tuple:
     """
-    Extrai os 3 últimos tokens da key para ordenação.
+    Extrai todos os tokens da key para ordenação.
     Key format: token1|token2|token3|token4|token5
-    Ordena por: token3, token4, token5 
+    Ordena por: token1, token2, token3, token4, token5
     """
     tokens = key.split("|")
-    if len(tokens) >= 3:
-        return (tokens[-3], tokens[-2], tokens[-1])
-    return (key,)
+    return tuple(tokens)
 
 
 def diff_snapshots(old: Dict, new: Dict, config: TableConfig) -> Dict:
