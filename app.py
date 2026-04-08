@@ -545,16 +545,25 @@ def diff_snapshots(old: Dict, new: Dict, config: TableConfig) -> Dict:
 
     return result
 
+# =========================
+# CONSTANTES DE ENDPOINTS
+# =========================
+ENDPOINT_DIFF = "/diff"
+ENDPOINT_FILTERS = "/filters"
+ENDPOINT_LIST = "/list"
+ENDPOINT_INSERT_CONTROLE_PROTOCOLO = "/insert-controle-protocolo"
+ENDPOINT_DELETE_CONTROLE_PROTOCOLO = "/delete-controle-protocolo"
+ERROR_INTERNAL = "Internal server error"
 
 # =========================
 # ENDPOINT API DIFF
 # =========================
-@app.get("/diff")
+@app.get(ENDPOINT_DIFF)
 def get_diff(
     scope_snapshot: Annotated[str, Query(..., alias="scope")],
     from_snapshot: Annotated[str, Query(..., alias="from")],
     to_snapshot: Annotated[str, Query(..., alias="to")],
-    api_key: str = Depends(verify_api_key)
+    api_key: Annotated[str, Depends(verify_api_key)]
 ):
     try:
         # Validate inputs
@@ -590,35 +599,35 @@ def get_diff(
             "diff": diff_result
         }
     except ValueError as e:
-        RequestLogger.log_error("/diff", str(e), "WARNING")
+        RequestLogger.log_error(ENDPOINT_DIFF, str(e), "WARNING")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        RequestLogger.log_error("/diff", str(e), "ERROR")
-        logging.error(f"Error in /diff scope: {scope_snapshot} endpoint: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        RequestLogger.log_error(ENDPOINT_DIFF, str(e), "ERROR")
+        logging.error(f"Error in {ENDPOINT_DIFF} scope: {scope_snapshot} endpoint: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_INTERNAL)
 
 # =========================
 # ENDPOINT API FILTERS
 # =========================
-@app.get("/filters")
-def get_filters(api_key: str = Depends(verify_api_key)):
+@app.get(ENDPOINT_FILTERS)
+def get_filters(api_key: Annotated[str, Depends(verify_api_key)]):
     try:
-        RequestLogger.log_request("/filters", api_key)
+        RequestLogger.log_request(ENDPOINT_FILTERS, api_key)
         return list_filters()
     except Exception as e:
-        RequestLogger.log_error("/filters", str(e), "ERROR")
-        logging.error(f"Error in /filters endpoint: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")        
+        RequestLogger.log_error(ENDPOINT_FILTERS, str(e), "ERROR")
+        logging.error(f"Error in {ENDPOINT_FILTERS} endpoint: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_INTERNAL)        
 
 # =========================
 # ENDPOINT API LIST
 # =========================
-@app.get("/list")
+@app.get(ENDPOINT_LIST)
 def get_list(
+    api_key: Annotated[str, Depends(verify_api_key)],
     contrato_regional: Annotated[Optional[List[str]], Query(..., alias="contrato_regional")] = None,
     contrato_nome_prestador: Annotated[Optional[List[str]], Query(..., alias="contrato_nome_prestador")] = None,
     contrato_nome_operadora: Annotated[Optional[List[str]], Query(..., alias="contrato_nome_operadora")] = None,
-    api_key: str = Depends(verify_api_key)
 ):
     try:
         # Validate and sanitize filter inputs
@@ -626,7 +635,7 @@ def get_list(
         contrato_nome_prestador = validate_filter_list(contrato_nome_prestador)
         contrato_nome_operadora = validate_filter_list(contrato_nome_operadora)
         
-        RequestLogger.log_request("/list", api_key, {
+        RequestLogger.log_request(ENDPOINT_LIST, api_key, {
             "contrato_regional": len(contrato_regional) if contrato_regional else 0,
             "contrato_nome_prestador": len(contrato_nome_prestador) if contrato_nome_prestador else 0,
             "contrato_nome_operadora": len(contrato_nome_operadora) if contrato_nome_operadora else 0,
@@ -634,27 +643,27 @@ def get_list(
         
         return list_protocol(contrato_regional, contrato_nome_prestador, contrato_nome_operadora)
     except ValueError as e:
-        RequestLogger.log_error("/list", str(e), "WARNING")
+        RequestLogger.log_error(ENDPOINT_LIST, str(e), "WARNING")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        RequestLogger.log_error("/list", str(e), "ERROR")
-        logging.error(f"Error in /list endpoint: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")        
+        RequestLogger.log_error(ENDPOINT_LIST, str(e), "ERROR")
+        logging.error(f"Error in {ENDPOINT_LIST} endpoint: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_INTERNAL)        
 
 # =========================
 # ENDPOINT API insert controle protocolo
 # =========================
-@app.post("/insert-controle-protocolo")
+@app.post(ENDPOINT_INSERT_CONTROLE_PROTOCOLO)
 def post_insert_controle_protocolo(
     data: ControleProtocoloInsert, 
-    api_key: str = Depends(verify_api_key)
+    api_key: Annotated[str, Depends(verify_api_key)]
 ):
     try:
         # Validate protocolo field
         protocolo = validate_protocolo(data.NUM_PROTOCOLO)
         usuario = sanitize_string(data.NME_USUARIO, max_length=100)
         
-        RequestLogger.log_request("/insert-controle-protocolo", api_key, {
+        RequestLogger.log_request(ENDPOINT_INSERT_CONTROLE_PROTOCOLO, api_key, {
             "protocolo": protocolo
         })
         
@@ -678,23 +687,23 @@ def post_insert_controle_protocolo(
                 response.update(existing)
             return response
     except ValueError as e:
-        RequestLogger.log_error("/insert-controle-protocolo", str(e), "WARNING")
+        RequestLogger.log_error(ENDPOINT_INSERT_CONTROLE_PROTOCOLO, str(e), "WARNING")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        RequestLogger.log_error("/insert-controle-protocolo", str(e), "ERROR")
-        logging.error(f"Error in /insert-controle-protocolo endpoint: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        RequestLogger.log_error(ENDPOINT_INSERT_CONTROLE_PROTOCOLO, str(e), "ERROR")
+        logging.error(f"Error in {ENDPOINT_INSERT_CONTROLE_PROTOCOLO} endpoint: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_INTERNAL)
 
-@app.post("/delete-controle-protocolo")
+@app.post(ENDPOINT_DELETE_CONTROLE_PROTOCOLO)
 def post_delete_controle_protocolo(
     data: ControleProtocoloDelete, 
-    api_key: str = Depends(verify_api_key)
+    api_key: Annotated[str, Depends(verify_api_key)]
 ):
     try:
         # Validate protocolo field
         protocolo = validate_protocolo(data.NUM_PROTOCOLO)
         
-        RequestLogger.log_request("/delete-controle-protocolo", api_key, {
+        RequestLogger.log_request(ENDPOINT_DELETE_CONTROLE_PROTOCOLO, api_key, {
             "protocolo": protocolo
         })
         
@@ -706,9 +715,9 @@ def post_delete_controle_protocolo(
             "message": "Protocolo deleted successfully" if result else "Failed to delete protocolo"
         }
     except ValueError as e:
-        RequestLogger.log_error("/delete-controle-protocolo", str(e), "WARNING")
+        RequestLogger.log_error(ENDPOINT_DELETE_CONTROLE_PROTOCOLO, str(e), "WARNING")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        RequestLogger.log_error("/delete-controle-protocolo", str(e), "ERROR")
-        logging.error(f"Error in /delete-controle-protocolo endpoint: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        RequestLogger.log_error(ENDPOINT_DELETE_CONTROLE_PROTOCOLO, str(e), "ERROR")
+        logging.error(f"Error in {ENDPOINT_DELETE_CONTROLE_PROTOCOLO} endpoint: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_INTERNAL)
