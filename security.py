@@ -25,7 +25,7 @@ class APIKeyAuth:
             )
         
         if not self._is_valid_key(self.api_key):
-            logger.warning(f"Invalid API key attempt")
+            logger.warning("Invalid API key attempt")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Invalid API Key",
@@ -37,7 +37,7 @@ class APIKeyAuth:
         """Check if the provided key matches the configured API key."""
         return key == settings.api_key
 
-async def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-Key")):
+def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-Key")):
     """Dependency to verify API key in request headers."""
     auth = APIKeyAuth(x_api_key)
     auth.validate()
