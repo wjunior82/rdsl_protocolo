@@ -138,6 +138,7 @@ TABLE_CONFIGS: Dict[str, TableConfig] = {
         regra_escopo_negociacao_direta AS \"Negociação Direta\", regra_escopo_itens_excecao AS \"Itens de Exceção\", \
         regra_tipo AS \"Tipo de Regra\", concat(regra_tabela_tabela, ' - ', regra_tabela_versao) AS \"Tabela\", \
         regra_brasindice_congelado AS \"Brasindice Congelado\", regra_simpro_congelado AS \"SIMPRO Congelado\", \
+        regra_preco_de_referencia AS \"Preço de referência\", \
         regra_fracionamento AS \"Fracionamento\", regra_tipo_preco AS \"Tipo preço\", \
         case when regra_tipo IN ('Brasíndice', 'Simpro', 'Tabela Preço Fixo', 'Tabela Própria') then case when ((regra_reajuste_tipo is null) or (regra_reajuste_ajuste is null)) then '' else concat(regra_reajuste_tipo, ' de ', regra_reajuste_ajuste, '%') end else '' end AS \"Reajuste %\", \
         case when regra_tipo IN ('Brasíndice', 'Valoração variavel') then case when ((regra_margem_tipo is null) or (regra_margem_ajuste is null)) then '' else concat(regra_margem_tipo, ' de ', regra_margem_ajuste, '%') end else '' end AS \"Margem %\", \
