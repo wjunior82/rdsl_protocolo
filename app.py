@@ -469,7 +469,13 @@ def _extract_sort_key(key: str) -> tuple:
     Ordena por: token1, token2, token3, token4, token5
     """
     tokens = key.split("|")
-    return tuple(tokens)
+    converted = []
+    for token in tokens:
+        try:
+            converted.append(int(token))
+        except ValueError:
+            converted.append(token)
+    return tuple(converted)
 
 
 def diff_snapshots(old: Dict, new: Dict, config: TableConfig) -> Dict:
