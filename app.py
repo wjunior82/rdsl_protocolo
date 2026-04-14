@@ -161,8 +161,16 @@ TABLE_CONFIGS: Dict[str, TableConfig] = {
         regra_brasindice_congelado AS \"Brasindice Congelado\", regra_simpro_congelado AS \"SIMPRO Congelado\", \
         regra_preco_de_referencia AS \"Preço de referência\", \
         regra_fracionamento AS \"Fracionamento\", regra_tipo_preco AS \"Tipo preço\", \
-        case when regra_tipo IN ('Brasíndice', 'Simpro', 'Tabela Preço Fixo', 'Tabela Própria') then case when ((regra_reajuste_tipo is null) or (regra_reajuste_margem is null)) then '' else concat(regra_reajuste_tipo, ' de ', regra_reajuste_margem, '%') end else '' end AS \"Reajuste %\", \
-        case when regra_tipo IN ('Brasíndice', 'Valoração variavel') then case when ((regra_margem_tipo is null) or (regra_margem_margem is null)) then '' else concat(regra_margem_tipo, ' de ', regra_margem_margem, '%') end else '' end AS \"Margem %\", \
+        case when regra_tipo IN ('Brasíndice') then \
+            case when ((regra_reajuste_tipo is null) or (regra_margem_margem is null)) then '' else concat(regra_reajuste_tipo, ' de ', regra_margem_margem, '%') end \
+        when regra_tipo IN ('Simpro', 'Tabela Preço Fixo', 'Tabela Própria') then \
+            case when ((regra_reajuste_tipo is null) or (regra_reajuste_margem is null)) then '' else concat(regra_reajuste_tipo, ' de ', regra_reajuste_margem, '%') end \
+        else '' end AS \"Reajuste %\", \
+        case when regra_tipo IN ('Brasíndice') then \
+            case when ((regra_margem_tipo is null) or (regra_margem_margem is null)) then '' else concat(regra_margem_tipo, ' de ', regra_margem_margem, '%') end \
+        when regra_tipo IN ('Valoração variavel') then \
+            case when ((regra_margem_tipo is null) or (regra_reajuste_margem is null)) then '' else concat(regra_margem_tipo, ' de ', regra_reajuste_margem, '%') end \
+        else '' end AS \"Margem %\", \
         case when regra_tipo IN ('Tabela Própria', 'Valoração variavel', 'Tabela Própria') then case when ((regra_rsfd_taxa_comercializacao_tipo is null) or (regra_rsfd_taxa_comercializacao_margem is null)) then '' else concat(regra_rsfd_taxa_comercializacao_tipo, ' de ', regra_rsfd_taxa_comercializacao_margem, '%') end else '' end AS \"Taxa de Comercialização\", \
         regra_aliquota AS \"Aliquota\", regra_entrantes AS \"Entrantes\", regra_regra_de_entrantes AS \"Regra de Entrantes\", regra_inclusao_automatica_entrantes AS \"Inclusão automática entrantes\", regra_periodicidade_entrantes AS \"Periodicidade entrantes\", regra_observacoes_entrantes AS \"Observações Entrantes\", regra_descontinuados AS \"Descontinuados\", regra_regra_de_descontinuados AS \"Regra de Descontinuados\", regra_inclusao_automatica_descontinuados AS \"Inclusão automática descontinuados\", regra_periodicidade_descontinuados AS \"Periodicidade descontinuados\", regra_observacoes_descontinuados AS \"Observações Descontinuados\", regra_observacoes AS \"Observações\", regra_tipo_de_alteracao AS \"Tipo de Alteração\", \
         case when regra_tipo IN ('Brasíndice') then case when ((regra_tabela_fracionamento_tabela is null) or (regra_tabela_fracionamento_versao is null)) then '' else concat(regra_tabela_fracionamento_tabela, ' - ', regra_tabela_fracionamento_versao) end else '' end AS \"Tabela Fracionamento\", \
@@ -177,7 +185,11 @@ TABLE_CONFIGS: Dict[str, TableConfig] = {
         regra_preco_de_referencia AS \"Preço de referência\", \
         regra_brasindice_congelado AS \"Brasindice Congelado\", regra_simpro_congelado AS \"SIMPRO Congelado\", \
         regra_fracionamento AS \"Fracionamento\", regra_tipo_preco AS \"Tipo preço\", \
-        case when regra_tipo IN ('Brasíndice', 'Simpro', 'Tabela Preço Fixo', 'Tabela Própria') then case when ((regra_reajuste_tipo is null) or (regra_reajuste_margem is null)) then '' else concat(regra_reajuste_tipo, ' de ', regra_reajuste_margem, '%') end else '' end AS \"Reajuste %\", \
+        case when regra_tipo IN ('Brasíndice') then \
+            case when ((regra_reajuste_tipo is null) or (regra_margem_margem is null)) then '' else concat(regra_reajuste_tipo, ' de ', regra_margem_margem, '%') end \
+        when regra_tipo IN ('Simpro', 'Tabela Preço Fixo', 'Tabela Própria') then \
+            case when ((regra_reajuste_tipo is null) or (regra_reajuste_margem is null)) then '' else concat(regra_reajuste_tipo, ' de ', regra_reajuste_margem, '%') end \
+        else '' end AS \"Reajuste %\", \
         case when regra_tipo IN ('Brasíndice', 'Valoração variavel') then case when ((regra_margem_tipo is null) or (regra_margem_margem is null)) then '' else concat(regra_margem_tipo, ' de ', regra_margem_margem, '%') end else '' end AS \"Margem %\", \
         case when regra_tipo IN ('Tabela Própria', 'Valoração variavel') then case when ((regra_rsfd_taxa_comercializacao_tipo is null) or (regra_rsfd_taxa_comercializacao_margem is null)) then '' else concat(regra_rsfd_taxa_comercializacao_tipo, ' de ', regra_rsfd_taxa_comercializacao_margem, '%') end else '' end AS \"Taxa de Comercialização\", \
         regra_aliquota AS \"Aliquota\", regra_entrantes AS \"Entrantes\", regra_regra_de_entrantes AS \"Regra de Entrantes\", regra_inclusao_automatica_entrantes AS \"Inclusão automática entrantes\", regra_periodicidade_entrantes AS \"Periodicidade entrantes\", regra_observacoes_entrantes AS \"Observações Entrantes\", regra_descontinuados AS \"Descontinuados\", regra_regra_de_descontinuados AS \"Regra de Descontinuados\", regra_inclusao_automatica_descontinuados AS \"Inclusão automática descontinuados\", regra_periodicidade_descontinuados AS \"Periodicidade descontinuados\", regra_observacoes_descontinuados AS \"Observações Descontinuados\", regra_observacoes AS \"Observações\", regra_tipo_de_alteracao AS \"Tipo de Alteração\", \
