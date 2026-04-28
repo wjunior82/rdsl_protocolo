@@ -36,6 +36,7 @@
         sudo systemctl enable rdsl_protocolo
         sudo systemctl start rdsl_protocolo
         sudo systemctl stop rdsl_protocolo
+        sudo systemctl restart rdsl_protocolo
  
     #Para analisar o log em tempo real basta usar o comando abaixo
         journalctl -u rdsl_protocolo -f
